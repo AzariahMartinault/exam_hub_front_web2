@@ -1,25 +1,45 @@
-const API_BASE_URL = "http://localhost:3001/api";
-export async function apiClient(endpoint, options = {}) {
-    const token = localStorage.getItem("token");
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const TOKEN_KEY = "exam_hub_token";
 
-    const headers = {
-        "Content-Type": "application/json",
-        ...options.headers,
-    };
-    if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        headers,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.message || "Une erreur est survenue");
-    }
-
-    return data;
+export class ApiError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
 }
+
+async function request(path, options = {}) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+
+  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    // pas de corps (ex: 204)
+  }
+
+  if (!res.ok) {
+    throw new ApiError(data?.message || `Erreur ${res.status}`, res.status);
+  }
+  return data;
+}
+
+// Style fonction : apiClient("/students", { method: "POST", body: ... })
+// -> compatible avec les fichiers api/ existants côté admin
+export function apiClient(path, options = {}) {
+  return request(path, options);
+}
+
+// Style objet : apiClient.get(...), apiClient.post(...)
+// -> utilisé par les fichiers api/ côté étudiant
+apiClient.get = (path) => request(path);
+apiClient.post = (path, body) => request(path, { method: "POST", body: JSON.stringify(body) });
+apiClient.put = (path, body) => request(path, { method: "PUT", body: JSON.stringify(body) });
+apiClient.delete = (path) => request(path, { method: "DELETE" });

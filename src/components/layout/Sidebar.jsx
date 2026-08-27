@@ -1,5 +1,5 @@
-import { NavLink } from "react-router-dom";
-import { logout, getUser } from "../../api/auth";
+import { NavLink, useNavigate } from "react-router-dom";
+import { getUser, logout } from "../../api/auth";
 
 const adminLinks = [
   { to: "/admin", label: "Tableau de bord", end: true },
@@ -8,28 +8,43 @@ const adminLinks = [
   { to: "/admin/exams", label: "Examens" },
 ];
 
+const studentLinks = [
+  { to: "/student", label: "Examens", end: true },
+  { to: "/student/results", label: "Mes résultats" },
+];
+
 export default function Sidebar() {
   const user = getUser();
+  const navigate = useNavigate();
+  const isAdmin = user?.role === "admin";
+  const links = isAdmin ? adminLinks : studentLinks;
+
+  function handleLogout() {
+    logout();
+    navigate("/login", { replace: true });
+  }
 
   return (
-    <aside className="w-64 min-h-screen bg-[var(--color-sidebar)] flex flex-col px-4 py-6">
+    <aside className="flex min-h-screen w-64 flex-col bg-sidebar px-4 py-6">
       <div className="mb-8 px-2">
-        <h1 className="text-xl font-bold text-white font-[var(--font-display)]">
+        <h1 className="font-display text-xl font-bold text-white">
           Exam Hub
         </h1>
-        <p className="text-xs text-gray-400 mt-0.5">Espace administrateur</p>
+        <p className="mt-0.5 text-xs text-gray-400">
+          {isAdmin ? "Espace administrateur" : "Espace étudiant"}
+        </p>
       </div>
 
-      <nav className="flex-1 flex flex-col gap-1">
-        {adminLinks.map((link) => (
+      <nav className="flex flex-1 flex-col gap-1">
+        {links.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
             end={link.end}
             className={({ isActive }) =>
-              `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-[var(--color-accent)] text-white"
+                  ? "bg-accent text-white"
                   : "text-gray-300 hover:bg-white/5 hover:text-white"
               }`
             }
@@ -39,12 +54,12 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-white/10 pt-4 px-2">
-        <p className="text-sm text-white font-medium truncate">{user?.name}</p>
-        <p className="text-xs text-gray-400 mb-3">{user?.role}</p>
+      <div className="border-t border-white/10 px-2 pt-4">
+        <p className="truncate text-sm font-medium text-white">{user?.name}</p>
+        <p className="mb-3 text-xs text-gray-400">{user?.role}</p>
         <button
-          onClick={logout}
-          className="w-full text-left text-sm text-gray-300 hover:text-white transition-colors"
+          onClick={handleLogout}
+          className="w-full text-left text-sm text-gray-300 transition-colors hover:text-white"
         >
           Se déconnecter
         </button>
